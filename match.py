@@ -18,9 +18,9 @@ def main():
 
     for file in listdir('test-set'):
         if not file.startswith('.'):
-            table = {}
-            midi_train(table, 'test-set/' + file)
-            match(file, table, master_table)
+            # table = {}
+            # midi_train(table, 'test-set/' + file)
+            # match(file, table, master_table)
 
     pprint.pprint(TALLY)
     

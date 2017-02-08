@@ -67,38 +67,43 @@ def midi_train(table, file, genre=""):
     # wow the units check out!
     # bars = beats / beats_per_bar
 
-    # remember current onset and its highest pitch so far
-    curr = (notes[0][ONSET], notes[0][PITCH])
+    cursor = 0
 
-    for note in range(len(notes)):
-        onset = notes[note][ONSET]
-        pitch = notes[note][PITCH]
+    while cursor < len(notes) - 1:
+        highest, highest_onset, cursor_moved_by = get_highest(notes, cursor, ticks_per_bar)
+        add_note(table, highest, highest_onset, genre_trimmed)
+        cursor += cursor_moved_by
 
-        # is this note at the beginning of the bar?
-        if onset % ticks_per_bar == 0:
+# return the highest note in the current bar and how many notes were parsed
+def get_highest(notes, cursor, ticks_per_bar):
+    cursor_moved_by = 0
+    highest = 0
+    highest_onset = 0
+    onset = notes[cursor][ONSET]
+    next_bar = onset + ticks_per_bar
 
-            # does this note have the same offset?
-            if onset == curr[ONSET]:
+    while notes[cursor][ONSET] < next_bar:
+        if notes[cursor][ONSET] == onset:
+            if notes[cursor][PITCH] > highest:
+                highest = notes[cursor][PITCH]
+                highest_onset = notes[cursor][ONSET]
+        
+        if cursor < len(notes) - 1:
+            cursor += 1
+            cursor_moved_by += 1
+        else:
+            break
 
-                # look for the highest pitch for this onset
-                if pitch > curr[PITCH]:
-                    curr = (onset, pitch)
+    return highest, highest_onset, cursor_moved_by
 
-            # we've reached the next onset
-            else:
-                add_note(table, genre_trimmed, curr)
-                curr = (onset, pitch)
-
-    add_note(table, genre_trimmed, curr)
-
-def add_note(table, genre_trimmed, curr):
+def add_note(table, pitch, onset, genre_trimmed):
     # add to table if it's a new pitch
-    if curr[PITCH] not in table.keys():
-        table[curr[PITCH]] = [(curr[ONSET], genre_trimmed)]
+    if pitch not in table.keys():
+        table[pitch] = [(onset, genre_trimmed)]
 
     # append if pitch already exists as a key
     else:
-        table[curr[PITCH]].append((curr[ONSET], genre_trimmed))
+        table[pitch].append((onset, genre_trimmed))
 
 def find_time_signature(events):
     for i in range(len(events)):
@@ -111,7 +116,9 @@ def export_table():
     for tick, pitch_name_pairs in TABLE.items():
         row = str(tick) + SEPARATOR
         for pair in pitch_name_pairs:
-            row += str(pair[0]) + SEPARATOR + str(pair[1]) + SEPARATOR
+            for value in pair:
+                row += str(value) + SEPARATOR
+            # row += str(pair[0]) + SEPARATOR + str(pair[1]) + SEPARATOR
         row += '\n'
         file.write(row)
 

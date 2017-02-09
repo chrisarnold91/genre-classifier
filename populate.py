@@ -50,6 +50,22 @@ def midi_train(table, file, genre=""):
     # first matrix column is the offset in ticks (milliseconds)
     notes = midi.notes(unit='ticks')
 
+    ticks_per_bar = get_ticks_per_bar(midi, notes, file)
+    if ticks_per_bar == None:
+        return
+
+    # wow the units check out!
+    # bars = beats / beats_per_bar
+
+    # cursor is the index (or row) of a note matrix
+    cursor = 0
+
+    while cursor < len(notes) - 1:
+        highest, highest_onset, cursor_moved_by = get_highest(notes, cursor, ticks_per_bar)
+        add_note(table, highest, file, genre_trimmed, highest_onset)
+        cursor += cursor_moved_by
+
+def get_ticks_per_bar(midi, notes, file):
     # total number of ticks divided by resolution (number of ticks per beat)
     beats = notes[-1][ONSET] / midi.resolution
 
@@ -59,20 +75,11 @@ def midi_train(table, file, genre=""):
     event_index = find_time_signature(events)
     if event_index == None:
         print 'Time Signature not found for {}'.format(file)
-        return
+        return None
 
     beats_per_bar = events[event_index].data[ONSET]
-    ticks_per_bar = beats_per_bar * midi.resolution
+    return beats_per_bar * midi.resolution
 
-    # wow the units check out!
-    # bars = beats / beats_per_bar
-
-    cursor = 0
-
-    while cursor < len(notes) - 1:
-        highest, highest_onset, cursor_moved_by = get_highest(notes, cursor, ticks_per_bar)
-        add_note(table, highest, highest_onset, genre_trimmed)
-        cursor += cursor_moved_by
 
 # return the highest note in the current bar and how many notes were parsed
 def get_highest(notes, cursor, ticks_per_bar):
@@ -96,14 +103,14 @@ def get_highest(notes, cursor, ticks_per_bar):
 
     return highest, highest_onset, cursor_moved_by
 
-def add_note(table, pitch, onset, genre_trimmed):
+def add_note(table, pitch, file, genre_trimmed, onset):
     # add to table if it's a new pitch
     if pitch not in table.keys():
-        table[pitch] = [(onset, genre_trimmed)]
+        table[pitch] = [(file, genre_trimmed, onset)]
 
     # append if pitch already exists as a key
     else:
-        table[pitch].append((onset, genre_trimmed))
+        table[pitch].append((file, genre_trimmed, onset))
 
 def find_time_signature(events):
     for i in range(len(events)):

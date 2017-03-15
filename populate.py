@@ -20,8 +20,22 @@ DURATION = 2
 VELOCITY = 3
 CHANNEL = 4
 
+FEATURE = 0
+
+# 0: highest first note of each bar, tracking milliseconds
+# 1: highest first note of each bar, tracking bars
 
 def main():
+    if len(sys.argv) != 2:
+        print "usage: requires exactly one argument"
+        return
+
+    if int(sys.argv[1]) not in range(2):
+        print "usage: argument must be within range(" + str(2) + ")"
+        return
+
+    FEATURE = int(sys.argv[1])
+
     warnings.filterwarnings('ignore')
 
     np.set_printoptions(suppress=True)
@@ -55,14 +69,20 @@ def midi_train(table, file, genre=""):
         return
 
     # wow the units check out!
-    # bars = beats / beats_per_bar
+    # bars_in_track = beats / beats_per_bar
 
     # cursor is the index (or row) of a note matrix
     cursor = 0
 
     while cursor < len(notes) - 1:
         highest, highest_onset, cursor_moved_by = get_highest(notes, cursor, ticks_per_bar)
-        add_note(table, highest, file, genre_trimmed, highest_onset)
+
+        # if FEATURE == 0:
+        #     add_note(table, highest, file, genre_trimmed, highest_onset)
+        # elif FEATURE == 1:
+        bar = highest_onset // ticks_per_bar
+        add_note(table, highest, file, genre_trimmed, bar)
+    
         cursor += cursor_moved_by
 
 def get_ticks_per_bar(midi, notes, file):
@@ -72,7 +92,7 @@ def get_ticks_per_bar(midi, notes, file):
     # find time signature numerator, only works for type 1 midi files
     # for type 1 midi, each channel (voice) is contained in its own track
     events = midi.tracks[0].events
-    event_index = find_time_signature(events)
+    event_index = find_event(events, TimeSignatureEvent)
     if event_index == None:
         print 'Time Signature not found for {}'.format(file)
         return None
@@ -112,9 +132,9 @@ def add_note(table, pitch, file, genre_trimmed, onset):
     else:
         table[pitch].append((file, genre_trimmed, onset))
 
-def find_time_signature(events):
+def find_event(events, event_type):
     for i in range(len(events)):
-        if isinstance(events[i], TimeSignatureEvent):
+        if isinstance(events[i], event_type):
             return i
     return None
 

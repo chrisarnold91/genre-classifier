@@ -9,7 +9,7 @@ from os import listdir
 from populate import *
 
 TABLE_FILE = 'table.csv'
-ONSET_TOLERANCE = 0       # milliseconds
+ONSET_TOLERANCE = 100       # milliseconds
 # TALLY = {}
 
 TITLE = 0
@@ -31,8 +31,9 @@ def main():
             tally = tally_matches(matches)
             classification = classify_genre(tally)
             percentages = get_percentages(classification)
-            pprint.pprint(tally)
-            pprint.pprint(classification)
+            # pprint.pprint(tally)
+            # pprint.pprint(classification)
+            print(file)
             print(percentages)
 
 def midi_classify(file, master_table):
@@ -54,7 +55,7 @@ def midi_classify(file, master_table):
 
     while cursor < len(notes) - 1:
         highest, onset, cursor_moved_by = get_highest(notes, cursor, ticks_per_bar)
-        time_gap = onset - prev_onset
+        # time_gap = onset - prev_onset
 
         # compare current highest note with previous highest note
         if prev_highest in master_table.keys() and highest in master_table.keys():
@@ -63,7 +64,7 @@ def midi_classify(file, master_table):
             for x in master_table[prev_highest]:
                 for y in master_table[highest]:
                     if x[TITLE] == y[TITLE]:
-                        if 0 <= y[ONSET] - x[ONSET] - time_gap <= ONSET_TOLERANCE:
+                        if 0 <= y[ONSET] - x[ONSET] - 1 <= ONSET_TOLERANCE:
                             m.append((x[TITLE], x[GENRE]))
 
         matches[interval] = m

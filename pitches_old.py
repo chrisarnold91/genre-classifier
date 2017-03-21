@@ -5,6 +5,7 @@ from sys import argv
 from os import listdir
 from madmom.utils.midi import MIDIFile
 from heapq import nlargest
+from pprint import pprint
 
 # Shazam: https://www.ee.columbia.edu/~dpwe/papers/Wang03-shazam.pdf
 # see Figure 3A (page 4) for the reasoning behind scatter plots
@@ -209,19 +210,14 @@ def main():
 
     for sample_file in listdir('test-set'):
         if not sample_file.startswith('.'):
-
             sample_hashes = {}
             build_hash_table(sample_file, sample_hashes, 'sample',
                 hash_functions[argv[1]])
-
             buckets, genres = match(training_hashes, sample_hashes)
             # plot_graph(buckets)
 
             print genres
-            if genres:
-                print "Is {} {}?".format(sample_file, max(genres, key=genres.get))
-            else:
-                print "no hashes found :("
+            print "Is {} {}?".format(sample_file, max(genres))
 
 def build_hash_table(file, hashes, genre, hash_function):
     """
@@ -246,6 +242,9 @@ def build_hash_table(file, hashes, genre, hash_function):
     midi = MIDIFile.from_file(file_name)
     notes = midi.notes(unit='ticks')
     peak = get_most_frequent_note(notes[:,PITCH])
+
+    if genre == 'sample':
+        print peak
 
     most_frequent = []
     for note in notes:
@@ -275,18 +274,18 @@ def match(training, sample):
     genres = {}
 
     for key, value in sample.items():
-        if key in training:
-            for sample_time in value:
-                for training_time in training[key]:
-                    bucket_name = training_time.file_name
-                    if key in training:
-                        if bucket_name not in buckets:
-                            # make a new bucket for this track (use track name)
-                            buckets[bucket_name] = Bucket()
+        # if key in training:
+        for sample_time in value:
+            for training_time in training[key]:
+                bucket_name = training_time.file_name
+                if key in training:
+                    if bucket_name not in buckets:
+                        # make a new bucket for this track (use track name)
+                        buckets[bucket_name] = Bucket()
 
-                        buckets[bucket_name].add_training_time(training_time.onset)
-                        buckets[bucket_name].add_sample_time(sample_time.onset)
-                        genres[training_time.genre] = genres.get(training_time.genre, 0) + 1
+                    buckets[bucket_name].add_training_time(training_time.onset)
+                    buckets[bucket_name].add_sample_time(sample_time.onset)
+                    genres[training_time.genre] = genres.get(training_time, 0) + 1
 
     return buckets, genres
 
@@ -303,9 +302,9 @@ def get_most_frequent_note(pitches):
         note = Note(int(pitch))
         tally[note] = tally.get(note, 0) + 1
     most_frequent = nlargest(TOP_MOST_FREQUENT, tally, key=tally.get)
-    # print 'most frequent: ' + str(most_frequent)
+    print 'most frequent: ' + str(most_frequent)
 
-    return note.midi_pitch
+    return most_frequent[0].midi_pitch
 
 def hash_time_diff(file, genre, hashes, notes):
     """
@@ -346,8 +345,8 @@ def hash_time_diff_location(file, genre, hashes, notes):
 
             # hash is of the form onset_diff|percentile
             # ex: diff = 20, percentile = 50, hash = 2050
-            percentile = notes[i][ONSET] / float(total_length) * 100
-            h = (notes[i+j][ONSET] - notes[i][ONSET]) * 100 + int(percentile)
+            percentile = notes[i][ONSET] / float(total_length) * 10
+            h = (notes[i+j][ONSET] - notes[i][ONSET]) * 10 + int(percentile)
             pair = PeakPair(notes[i][ONSET], file, genre)
             hashes.setdefault(h, []).append(pair)
 

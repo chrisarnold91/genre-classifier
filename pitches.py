@@ -278,6 +278,8 @@ def match(training, sample):
         if key in training:
             for sample_time in value:
                 for training_time in training[key]:
+                    # check sample is not matching on itself
+                    # if sample_time.file_name != training_time.file_name:
                     bucket_name = training_time.file_name
                     if key in training:
                         if bucket_name not in buckets:
@@ -303,9 +305,8 @@ def get_most_frequent_note(pitches):
         note = Note(int(pitch))
         tally[note] = tally.get(note, 0) + 1
     most_frequent = nlargest(TOP_MOST_FREQUENT, tally, key=tally.get)
-    # print 'most frequent: ' + str(most_frequent)
 
-    return note.midi_pitch
+    return most_frequent[0].midi_pitch
 
 def hash_time_diff(file, genre, hashes, notes):
     """

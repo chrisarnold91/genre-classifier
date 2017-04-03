@@ -7,8 +7,14 @@ VELOCITY = 3
 CHANNEL = 4
 
 FAN_FACTOR = 5
+FEATURES = 5
 
-GENRES = ['classical', 'rock']
+GENRES = ['classical']
+SEPARATOR = ','
+FEATURES_FILE = 'features.csv'
+LABELS_FILE = 'labels.csv'
+TEST_FILE = 'test.csv'
+TEST_LABELS_FILE = 'test-labels.csv'
 
 def get_ticks_per_bar(midi, file):
     notes = midi.notes(unit='ticks')
@@ -31,3 +37,14 @@ def find_event(events, event_type):
         if isinstance(events[i], event_type):
             return i
     return None
+
+def get_notes(file):
+    print "analyzing " + file
+    midi = MIDIFile.from_file(file)
+    return midi.notes(unit='ticks')
+
+def export_table(table, csv):
+    file = open(csv, 'w')
+    for value_list in table.values():
+        row = SEPARATOR.join(map(str, value_list)) + '\n'
+        file.write(row)

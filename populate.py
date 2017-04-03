@@ -49,7 +49,7 @@ def main():
 
     pprint.pprint(TABLE)
     pickle.dump(TABLE, open("table.p", "wb"))
-    export_table()
+    export_table_old()
 
 def midi_train(table, file, genre=""):
     midi = MIDIFile.from_file(genre + file)
@@ -138,7 +138,7 @@ def find_event(events, event_type):
             return i
     return None
 
-def export_table():
+def export_table_old():
     file = open(TABLE_FILE, 'w')
     for tick, pitch_name_pairs in TABLE.items():
         row = str(tick) + SEPARATOR

@@ -1,4 +1,8 @@
+import numpy as np
+
+from warnings import filterwarnings
 from madmom.utils.midi import *
+from collections import OrderedDict
 
 ONSET = 0
 PITCH = 1
@@ -7,14 +11,38 @@ VELOCITY = 3
 CHANNEL = 4
 
 FAN_FACTOR = 5
-FEATURES = 5
+# MELODY_FEATURES = 5
 
-GENRES = ['classical']
+GENRES = ['classical', 'rock']
 SEPARATOR = ','
-FEATURES_FILE = 'features.csv'
+MELODY_FEATURES = 'features/melody_features.csv'
+PITCH_FEATURES = 'features/pitch_features.csv'
 LABELS_FILE = 'labels.csv'
 TEST_FILE = 'test.csv'
 TEST_LABELS_FILE = 'test-labels.csv'
+
+# https://docs.python.org/2/library/collections.html#collections.OrderedDict
+class LastUpdatedOrderedDict(OrderedDict):
+    'Store items in the order the keys were last added'
+
+    def __setitem__(self, key, value):
+        if key in self:
+            del self[key]
+        OrderedDict.__setitem__(self, key, value)
+
+def load_settings():
+    filterwarnings('ignore')
+    np.set_printoptions(suppress=True)
+    np.set_printoptions(threshold=np.nan)
+    np.set_printoptions(edgeitems=10)
+
+def get_classical(genres):
+    if not genres or 'classical' not in genres:
+        return 0
+    if 'rock' not in genres:
+        return 1
+    total = genres['classical'] + genres['rock']
+    return genres['classical'] / float(total)
 
 def get_ticks_per_bar(midi, file):
     notes = midi.notes(unit='ticks')
@@ -39,7 +67,6 @@ def find_event(events, event_type):
     return None
 
 def get_notes(file):
-    print "analyzing " + file
     midi = MIDIFile.from_file(file)
     return midi.notes(unit='ticks')
 

@@ -1,14 +1,17 @@
 import numpy as np
 import tensorflow as tf
 
-FEATURES = 5
+from config import *
+
 OUTPUTS = 2
 
-def base_NN(features, labels, iters=100, alpha=1e-1):
+def base_NN(features, labels, iters=1000, alpha=1e-2):
 
-    x = tf.placeholder(tf.float32, [None, FEATURES])
+    nodes = features.shape[1]
 
-    W = tf.Variable(tf.random_normal([FEATURES, OUTPUTS], stddev=0.01))
+    x = tf.placeholder(tf.float32, [None, nodes])
+
+    W = tf.Variable(tf.random_normal([nodes, OUTPUTS], stddev=0.01))
     b = tf.Variable(tf.random_normal([OUTPUTS], stddev=0.01))
 
     layer1 = tf.matmul(x, W) + b
@@ -30,14 +33,14 @@ def base_NN(features, labels, iters=100, alpha=1e-1):
     for i in range(iters):
         sess.run(train_step, feed_dict={x: features, y_: labels})
         print sess.run(accuracy, feed_dict={x: features, y_: labels})
-        print sess.run(tf.trainable_variables()[0])
+        # print sess.run(tf.trainable_variables()[0])
 
 def main():
-    x = np.loadtxt(open('features.csv', 'rb'), delimiter=',')
-    y_ = np.loadtxt(open('labels.csv', 'rb'), delimiter=',')
+    x = np.loadtxt(open(FEATURES_FILE, 'rb'), delimiter=',')
+    y_ = np.loadtxt(open(LABELS_FILE, 'rb'), delimiter=',')
     base_NN(x, y_)
 
-    test_x = np.loadtxt(open('test.csv', 'rb'), delimiter=',')
+    test_x = np.loadtxt(open(TEST_FILE, 'rb'), delimiter=',')
     
 
 if __name__ == '__main__':

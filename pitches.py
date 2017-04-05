@@ -1,10 +1,13 @@
 import matplotlib.pyplot as plt
 import warnings
+import pickle
 
+from config import *
 from sys import argv
 from os import listdir
 from madmom.utils.midi import MIDIFile
 from heapq import nlargest
+from pprint import pprint
 
 # Shazam: https://www.ee.columbia.edu/~dpwe/papers/Wang03-shazam.pdf
 # see Figure 3A (page 4) for the reasoning behind scatter plots
@@ -189,41 +192,61 @@ class Bucket():
         self._sample_times.append(time)
 
 def main():
-    warnings.filterwarnings('ignore')
+    
+    load_settings()
 
     hash_functions = {
         "0": hash_time_diff,
         "1": hash_time_diff_location
     }
 
+    # hash_functions = [hash_time_diff, hash_time_diff_location]
+
     if len(argv) != 2 or int(argv[1]) not in range(len(hash_functions)):
         print "usage: pitches.py <int in range(" + str(len(hash_functions)) + ")>"
         return
 
-    training_hashes = {}
-    for genre in GENRES:
-        for training_file in listdir('midi-' + genre):
-            if not training_file.startswith('.'):
-                build_hash_table(training_file, training_hashes, genre,
-                    hash_functions[argv[1]])
+    features = LastUpdatedOrderedDict()
 
-    for sample_file in listdir('test-set'):
-        if not sample_file.startswith('.'):
+    # build hashes
+    for f in range(1, FAN_FACTOR):   
 
-            sample_hashes = {}
-            build_hash_table(sample_file, sample_hashes, 'sample',
-                hash_functions[argv[1]])
+        hash_file = 'pitches_hash{}-{}.p'.format(argv[1], f)
+        hash_file_path = 'pickles/' + hash_file
 
-            buckets, genres = match(training_hashes, sample_hashes)
-            # plot_graph(buckets)
+        if hash_file not in listdir('pickles'):
+            training_hashes = {}
+            for genre in GENRES:
+                for training_file in listdir('midi-' + genre):
+                    if not training_file.startswith('.'):
+                        file_name = 'midi-' + genre + '/' + training_file
+                        print "building hashes for {} with setting {}".format(file_name, f)
+                        build_hash_table(training_file, training_hashes, genre,
+                            hash_functions[argv[1]], f)
 
-            print genres
-            if genres:
-                print "Is {} {}?".format(sample_file, max(genres, key=genres.get))
-            else:
-                print "no hashes found :("
+            pickle.dump(training_hashes, open(hash_file_path, "wb"))
 
-def build_hash_table(file, hashes, genre, hash_function):
+        else:
+            training_hashes = pickle.load(open(hash_file_path, "rb"))
+
+    for f in range(1, FAN_FACTOR):
+        for genre in GENRES:
+            for sample_file in listdir('midi-' + genre):
+                if not sample_file.startswith('.'):
+                    print "classifying {} with setting {}".format(sample_file, f)
+                    sample_hashes = {}
+                    build_hash_table(sample_file, sample_hashes, genre,
+                        hash_functions[argv[1]], f)
+
+                    buckets, genres = match(training_hashes, sample_hashes)
+                    score = get_classical(genres)
+                    features.setdefault(sample_file, []).append(score)
+                    # plot_graph(buckets)
+
+    pprint (features)
+    export_table(features, PITCH_FEATURES)
+
+def build_hash_table(file, hashes, genre, hash_function, fan_factor):
     """
     Build a dictionary of peak frequency hashes as keys and their
     corresponding time onsets as values, based off MIDI files in the
@@ -236,8 +259,6 @@ def build_hash_table(file, hashes, genre, hash_function):
     keys
     @rtype: None
     """
-    print 'analyzing pitches for ' + file
-
     if genre != 'sample':
         file_name = 'midi-' + genre + '/' + file
     else:
@@ -259,7 +280,7 @@ def build_hash_table(file, hashes, genre, hash_function):
                 most_frequent.append(note)
 
     # generate hashes for these peak pitches
-    hash_function(file, genre, hashes, most_frequent)
+    hash_function(file, genre, hashes, most_frequent, fan_factor)
 
 def match(training, sample):
     """
@@ -308,7 +329,7 @@ def get_most_frequent_note(pitches):
 
     return most_frequent[0].midi_pitch
 
-def hash_time_diff(file, genre, hashes, notes):
+def hash_time_diff(file, genre, hashes, notes, fan_factor):
     """
     Add or append to the hashes dictionary with a hash that considers the
     difference between peak pair's timestamps. Store the hash along with the
@@ -320,15 +341,15 @@ def hash_time_diff(file, genre, hashes, notes):
     @param list[int] notes: a list of MIDI notes in the madmom library format
     @rtype: None
     """
-    for i in range(len(notes) - (FAN_FACTOR + 1)):
-        for j in range(1, FAN_FACTOR + 1):
+    for i in range(len(notes) - (fan_factor + 1)):
+        for j in range(1, fan_factor + 1):
 
             # hash = later offset - earlier offset
             h = notes[i+j][ONSET] - notes[i][ONSET]
             pair = PeakPair(notes[i][ONSET], file, genre)
             hashes.setdefault(h, []).append(pair)
 
-def hash_time_diff_location(file, genre, hashes, notes):
+def hash_time_diff_location(file, genre, hashes, notes, fan_factor):
     """
     Add or append to the hashes dictionary with a hash that considers the
     difference between peak pair's timestamps and where it occurs in the file
@@ -342,8 +363,8 @@ def hash_time_diff_location(file, genre, hashes, notes):
     @rtype: None
     """
     total_length = notes[-1][ONSET]
-    for i in range(len(notes) - (FAN_FACTOR + 1)):
-        for j in range(1, FAN_FACTOR + 1):
+    for i in range(len(notes) - (fan_factor + 1)):
+        for j in range(1, fan_factor + 1):
 
             # hash is of the form onset_diff|percentile
             # ex: diff = 20, percentile = 50, hash = 2050

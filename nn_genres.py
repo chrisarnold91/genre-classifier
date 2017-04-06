@@ -2,10 +2,11 @@ import numpy as np
 import tensorflow as tf
 
 from config import *
+from os import listdir
 
 OUTPUTS = 2
 
-def base_NN(features, labels, iters=1000, alpha=1e-2):
+def base_NN(features, labels, test_features, test_labels, iters=1000, alpha=1e-3):
 
     nodes = features.shape[1]
 
@@ -35,12 +36,34 @@ def base_NN(features, labels, iters=1000, alpha=1e-2):
         print sess.run(accuracy, feed_dict={x: features, y_: labels})
         # print sess.run(tf.trainable_variables()[0])
 
-def main():
-    x = np.loadtxt(open(FEATURES_FILE, 'rb'), delimiter=',')
-    y_ = np.loadtxt(open(LABELS_FILE, 'rb'), delimiter=',')
-    base_NN(x, y_)
+    print sess.run(accuracy, feed_dict={x: test_features, y_: test_labels})
+    print sess.run(y, feed_dict={x: test_features, y_: test_labels})
 
-    test_x = np.loadtxt(open(TEST_FILE, 'rb'), delimiter=',')
+def main():
+
+    x = np.array([]).reshape(86,0)
+    test_x = np.array([]).reshape(19,0)
+
+    for file in listdir('features'):
+        if not file.startswith('.'):
+            if file != 'pitch_features.csv':
+                x = np.hstack((x, np.loadtxt(open('features/' + file, 'rb'), delimiter=',')))
+
+    y_ = np.loadtxt(open(LABELS_FILE, 'rb'), delimiter=',')
+
+    for file in listdir('test-features'):
+        if not file.startswith('.'):
+            test_x = np.hstack((test_x, np.loadtxt(open('test-features/' + file, 'rb'), delimiter=',')))
+
+    test_y = np.zeros((19,2), dtype=np.int)
+    test_y[:,0] = 1
+
+    # print x.shape
+    # print test_x.shape
+    # print y_.shape
+    # print test_y.shape
+
+    base_NN(x, y_, test_x, test_y)
     
 
 if __name__ == '__main__':

@@ -197,10 +197,8 @@ def main():
 
     hash_functions = {
         "0": hash_time_diff,
-        "1": hash_time_diff_location
+        "1": hash_time_diff_percentile
     }
-
-    # hash_functions = [hash_time_diff, hash_time_diff_location]
 
     if len(argv) != 2 or int(argv[1]) not in range(len(hash_functions)):
         print "usage: pitches.py <int in range(" + str(len(hash_functions)) + ")>"
@@ -329,7 +327,7 @@ def get_most_frequent_note(pitches):
 
     return most_frequent[0].midi_pitch
 
-def hash_time_diff(file, genre, hashes, notes, fan_factor):
+def hash_time_diff(file, genre, hashes, notes):
     """
     Add or append to the hashes dictionary with a hash that considers the
     difference between peak pair's timestamps. Store the hash along with the
@@ -341,15 +339,15 @@ def hash_time_diff(file, genre, hashes, notes, fan_factor):
     @param list[int] notes: a list of MIDI notes in the madmom library format
     @rtype: None
     """
-    for i in range(len(notes) - (fan_factor + 1)):
-        for j in range(1, fan_factor + 1):
+    for i in range(len(notes) - (FAN_FACTOR + 1)):
+        for j in range(1, FAN_FACTOR + 1):
 
             # hash = later offset - earlier offset
             h = notes[i+j][ONSET] - notes[i][ONSET]
             pair = PeakPair(notes[i][ONSET], file, genre)
             hashes.setdefault(h, []).append(pair)
 
-def hash_time_diff_location(file, genre, hashes, notes, fan_factor):
+def hash_time_diff_percentile(file, genre, hashes, notes):
     """
     Add or append to the hashes dictionary with a hash that considers the
     difference between peak pair's timestamps and where it occurs in the file
@@ -363,13 +361,28 @@ def hash_time_diff_location(file, genre, hashes, notes, fan_factor):
     @rtype: None
     """
     total_length = notes[-1][ONSET]
-    for i in range(len(notes) - (fan_factor + 1)):
-        for j in range(1, fan_factor + 1):
+    for i in range(len(notes) - (FAN_FACTOR + 1)):
+        for j in range(1, FAN_FACTOR + 1):
 
             # hash is of the form onset_diff|percentile
             # ex: diff = 20, percentile = 50, hash = 2050
             percentile = notes[i][ONSET] / float(total_length) * 100
             h = (notes[i+j][ONSET] - notes[i][ONSET]) * 100 + int(percentile)
+            pair = PeakPair(notes[i][ONSET], file, genre)
+            hashes.setdefault(h, []).append(pair)
+
+def hash_time_diff_pitch(file, genre, hashes, notes):
+    for i in range(len(notes) - (FAN_FACTOR + 1)):
+        for j in range(1, FAN_FACTOR + 1):
+            h = notes[i+j][ONSET] - notes[i][ONSET] * 1000 + notes[i][PITCH]
+            pair = PeakPair(notes[i][ONSET], file, genre)
+            hashes.setdefault(h, []).append(pair)
+
+def hash_time_diff_pitch_percentile(file, genre, hashes, notes):
+    for i in range(len(notes) - (FAN_FACTOR + 1)):
+        for j in range(1, FAN_FACTOR + 1):
+            percentile = notes[i][PITCH] / 127.0 * 10
+            h = notes[i+j][ONSET] - notes[i][ONSET] * 10 + int(percentile)
             pair = PeakPair(notes[i][ONSET], file, genre)
             hashes.setdefault(h, []).append(pair)
 

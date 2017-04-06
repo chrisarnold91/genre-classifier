@@ -9,6 +9,7 @@ from pitches import *
 
 CONSEC_DENOMS = 5
 MAX_ONSET = 1000    # assume after 3 seconds, melody has finished
+SETTINGS = 5
 
 class Track():
     def __init__(self, name):
@@ -119,80 +120,97 @@ def main():
 
     load_settings()
 
+    global H_FUNCTIONS
+    H_FUNCTIONS = [hash_time_diff, hash_time_diff_percentile, hash_time_diff_pitch,\
+    hash_time_diff_pitch_percentile]
+
     features = LastUpdatedOrderedDict()
-    labels = LastUpdatedOrderedDict()
-    # test_set = {}
-    # test_labels = {}
+    # labels = LastUpdatedOrderedDict()
 
     # build hashes
-    for setting in range(5):
+    for h in range(len(H_FUNCTIONS)):
+        for setting in range(SETTINGS):
 
-        training_hashes = {}
-        hash_file = 'melody_hash{}.p'.format(setting)
-        hash_file_path = 'pickles/' + hash_file
+            training_hashes = {}
+            hash_file = 'melody_hash{}-{}.p'.format(h, setting)
+            hash_file_path = 'pickles/' + hash_file
 
-        # build hashes from training set
-        if hash_file not in listdir('pickles'):
-            for genre in GENRES:
-                for file in listdir('midi-' + genre):
-                    if not file.startswith('.'):
-                        file_name = 'midi-' + genre + '/' + file
-                        print "building hashes for {} with setting {}".format(file_name, setting)
-                        track = Track(file)
-                        notes = get_notes(file_name)
-                        analyze_voices(notes, track, setting)
-                        build_hashes(file, genre, training_hashes, track)
+            # build hashes from training set
+            if hash_file not in listdir('pickles'):
+                for genre in GENRES:
+                    for file in listdir('midi-' + genre):
+                        if not file.startswith('.'):
+                            file_name = 'midi-' + genre + '/' + file
+                            print "building hashes {} for {} with setting {}".format(h, file_name, setting)
+                            track = Track(file)
+                            notes = get_notes(file_name)
+                            analyze_voices(notes, track, setting)
+                            build_hashes(h, file, genre, training_hashes, track)
 
-            pickle.dump(training_hashes, open(hash_file_path, "wb"))
+                pickle.dump(training_hashes, open(hash_file_path, "wb"))
 
     # classify tracks with hashes calculated above
-    if MELODY_FEATURES not in listdir('.'):
-        for setting in range(5):
+    for h in range(len(H_FUNCTIONS)):
 
-            hash_file = 'melody_hash{}.p'.format(setting)
+        melody_file = 'melody_features{}.csv'.format(h)
+        melody_path = 'features/' + melody_file
+
+        if melody_file not in listdir('features'):
+            for setting in range(SETTINGS):
+
+                hash_file = 'melody_hash{}-{}.p'.format(h, setting)
+                hash_file_path = 'pickles/' + hash_file
+                training_hashes = pickle.load(open(hash_file_path, "rb"))
+
+                for genre in GENRES:
+                    for file in listdir('midi-' + genre):
+                        if not file.startswith('.'):
+                            file_name = 'midi-' + genre + '/' + file
+                            print "using hash {}, classifying {} with setting {}".format(h, file_name, setting)
+                            track = Track(file)
+                            # empty the previous samples
+                            sample_hashes = {}
+                            notes = get_notes(file_name)
+                            analyze_voices(notes, track, setting)
+                            build_hashes(h, file, genre, sample_hashes, track)
+                            _, genres = match(training_hashes, sample_hashes)
+                            score = get_classical(genres)
+
+                            # generate labels
+                            # if setting == 0:
+                            #     labels[file] = [1,0] if genre == "classical" else [0,1]
+                            features.setdefault(file, []).append(score)
+
+            pprint(features)
+
+            export_table(features, melody_path)
+            # export_table(labels, LABELS_FILE)
+
+    for h in range(len(H_FUNCTIONS)):
+
+        test_file = 'test-features{}.csv'.format(h)
+        test_set = LastUpdatedOrderedDict()
+
+        for setting in range(SETTINGS):
+
+            hash_file = 'melody_hash{}-{}.p'.format(h, setting)
             hash_file_path = 'pickles/' + hash_file
             training_hashes = pickle.load(open(hash_file_path, "rb"))
 
-            for genre in GENRES:
-                for file in listdir('midi-' + genre):
-                    if not file.startswith('.'):
-                        file_name = 'midi-' + genre + '/' + file
-                        print "classifying {} with setting {}".format(file_name, setting)
-                        track = Track(file)
-                        # empty the previous samples
-                        sample_hashes = {}
-                        notes = get_notes(file_name)
-                        analyze_voices(notes, track, setting)
-                        build_hashes(file, genre, sample_hashes, track)
-                        _, genres = match(training_hashes, sample_hashes)
-                        score = get_classical(genres)
+            for file in listdir('test-set'):
+                if not file.startswith('.'):
+                    print "testing hash {} on {} with setting {}".format(h, file, setting)
+                    track = Track(file)
+                    test_hashes = {}
+                    notes = get_notes('test-set/' + file)
+                    analyze_voices(notes, track, setting)
+                    build_hashes(h, file, 'test', test_hashes, track)
+                    _, genres = match(training_hashes, test_hashes)
+                    score = get_classical(genres)
 
-                        # generate labels
-                        if setting == 0:
-                            labels[file] = [1,0] if genre == "classical" else [0,1]
-                        features.setdefault(file, []).append(score)
+                    test_set.setdefault(file, []).append(score)
 
-        pprint(features)
-
-        export_table(features, MELODY_FEATURES)
-        export_table(labels, LABELS_FILE)
-
-        # for file in listdir('test-set'):
-        #     if not file.startswith('.'):
-        #         track = Track(file)
-        #         test_hashes = {}
-        #         notes = get_notes('test-set' + '/' + file)
-        #         analyze_voices(notes, track, setting)
-        #         build_hashes(file, 'test', test_hashes, track)
-        #         _, genres = match(training_hashes, test_hashes)
-        #         score = get_classical(genres)
-
-        #         # if setting == 0:
-        #         #     test_labels[file] = [1,0] if genre == "classical" else [0,1]
-        #         test_set.setdefault(file, []).append(score)
-
-    # export_table(test_set, TEST_FILE)
-    # export_table(test_labels, TEST_LABELS_FILE)
+        export_table(test_set, 'test-features/' + test_file)
 
 def analyze_voices(notes, track, setting):
     for note in notes:
@@ -210,7 +228,7 @@ def analyze_voices(notes, track, setting):
     
     track.choose_melody(setting)
 
-def build_hashes(file, genre, hashes, track):
+def build_hashes(h, file, genre, hashes, track):
     if genre != 'test':
         file_name = 'midi-' + genre + '/' + file
     else:
@@ -226,7 +244,7 @@ def build_hashes(file, genre, hashes, track):
     peak = get_most_frequent_note(melody[:,PITCH])
     most_frequent = np.array([n for n in melody if n[PITCH] == peak])
 
-    hash_time_diff(file, genre, hashes, most_frequent)
+    H_FUNCTIONS[h](file, genre, hashes, most_frequent)
 
 if __name__ == '__main__':
     main()

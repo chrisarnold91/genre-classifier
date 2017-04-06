@@ -15,11 +15,10 @@ FAN_FACTOR = 5
 
 GENRES = ['classical', 'rock']
 SEPARATOR = ','
-MELODY_FEATURES = 'features/melody_features.csv'
+# MELODY_FEATURES = 'features/melody_features.csv'
 PITCH_FEATURES = 'features/pitch_features.csv'
 LABELS_FILE = 'labels.csv'
-TEST_FILE = 'test.csv'
-TEST_LABELS_FILE = 'test-labels.csv'
+LABELS_FILE_TEST = 'labels_test.csv'
 
 # https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):

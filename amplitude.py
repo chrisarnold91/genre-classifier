@@ -1,16 +1,9 @@
 import matplotlib.pyplot as plt
 import warnings
 
+from config import *
 from madmom.utils.midi import *
 from os import listdir
-
-GENRES = ['classical', 'rock']
-
-ONSET = 0
-PITCH = 1
-DURATION = 2
-VELOCITY = 3
-CHANNEL = 4
 
 
 def main():
@@ -44,9 +37,6 @@ def analyze_amplitude(file, genre):
     plt.savefig('amplitudes/' + file + '.png')
     # plt.show()
     plt.close()
-
-
-
 
 if __name__ == '__main__':
     main()

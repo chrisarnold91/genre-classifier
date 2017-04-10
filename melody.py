@@ -26,15 +26,6 @@ class Track():
         def key_with_max_value(d):
             return max(d, key=d.get)
 
-        # print "PITCH VARIANCE"
-        # pprint(self.pitch_var)
-        # print "PITCH DIFFS VARIANCE"
-        # pprint(self.pitch_diff_var)
-        # print "ONSET DIFFS VARIANCE"
-        # pprint(self.onset_diff_var)
-        # print "MAX RUNS"
-        # pprint(self.max_run)
-
         votes = []
         votes.append(key_with_max_value(self.pitch_var))
         votes.append(key_with_max_value(self.pitch_diff_var))
@@ -43,17 +34,12 @@ class Track():
         votes.append(min(set(votes), key=votes.count))
         self.melody_channel = votes[setting]
 
-        # print votes
-        # print "MELODY: {}".format(self.melody_channel)
-
 class Channel():
     def __init__(self, channel):
         self.channel = channel
         self.consecutives = {}
         self.onsets = []
         self.pitches = [] 
-        # self.pattern_frequencies = {}
-        # self.runs = []
 
     def __str__(self):
         return "channel {} {} {}".format(self.channel, self.onsets, self.pitches)
@@ -105,15 +91,8 @@ class Channel():
                     diffs.append(diff)
                 # count most occurring difference
                 if diffs:
-                    # most_occurring = max(set(diffs), key=diffs.count)
-                    # frequency = diffs.count(most_occurring) / float(len(diffs))
-                    # pattern_frequency[i] = round(frequency, 2)
-                    # all_runs[i] = round(max(runs) / float(len(diffs)), 2)
                     runs.append(round(max(runs) / float(len(diffs)), 2))
-            # self.pattern_frequencies[c] = pattern_frequency
-            # self.runs[c] = all_runs
-        # print(self.pattern_frequencies)
-        # print(max(self.runs))
+
         return (max(runs), len(self.pitches))
 
 def main():
@@ -125,7 +104,6 @@ def main():
     hash_time_diff_pitch_percentile]
 
     features = LastUpdatedOrderedDict()
-    # labels = LastUpdatedOrderedDict()
 
     # build hashes
     for h in range(len(H_FUNCTIONS)):
@@ -175,17 +153,11 @@ def main():
                             build_hashes(h, file, genre, sample_hashes, track)
                             _, genres = match(training_hashes, sample_hashes)
                             score = get_classical(genres)
-
-                            # generate labels
-                            # if setting == 0:
-                            #     labels[file] = [1,0] if genre == "classical" else [0,1]
                             features.setdefault(file, []).append(score)
 
-            pprint(features)
-
             export_table(features, melody_path)
-            # export_table(labels, LABELS_FILE)
 
+    # classify test set tracks
     for h in range(len(H_FUNCTIONS)):
 
         test_file = 'test-features{}.csv'.format(h)
@@ -207,7 +179,6 @@ def main():
                     build_hashes(h, file, 'test', test_hashes, track)
                     _, genres = match(training_hashes, test_hashes)
                     score = get_classical(genres)
-
                     test_set.setdefault(file, []).append(score)
 
         export_table(test_set, 'test-features/' + test_file)

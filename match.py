@@ -10,7 +10,6 @@ from populate import *
 
 TABLE_FILE = 'table.csv'
 ONSET_TOLERANCE = 100       # milliseconds
-# TALLY = {}
 
 TITLE = 0
 GENRE = 1
@@ -23,16 +22,12 @@ def main():
 
     for file in listdir('test-set'):
         if not file.startswith('.'):
-            # table = {}
-            # midi_train(table, 'test-set/' + file)
-            # match(file, table, master_table)
 
             matches = midi_classify('test-set/' + file, master_table)
             tally = tally_matches(matches)
             classification = classify_genre(tally)
             percentages = get_percentages(classification)
-            # pprint.pprint(tally)
-            # pprint.pprint(classification)
+
             print(file)
             print(percentages)
 
